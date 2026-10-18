@@ -1,0 +1,41 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Bootstrap dependencies
+        shell: pwsh
+        run: ./scripts/verify.ps1 -Mode Bootstrap -EvidenceDir tmp/ci/bootstrap
+      - name: Doctor
+        shell: pwsh
+        run: ./scripts/verify.ps1 -Mode Doctor -EvidenceDir tmp/ci/doctor -Offline
+      - name: Full synthetic behavior verification
+        shell: pwsh
+        run: ./scripts/verify.ps1 -Mode Full -EvidenceDir tmp/ci/full -Offline
+      - name: Required Linux race verification
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: ./scripts/verify.ps1 -Mode Race -EvidenceDir tmp/ci/race -Offline
+      - name: Retain candidate identity and verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ralx-${{ runner.os }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: tmp/ci/
+          if-no-files-found: error

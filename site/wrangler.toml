@@ -1,0 +1,6 @@
+name = "ralx-site"
+compatibility_date = "2026-10-12"
+pages_build_output_dir = "./public"
+
+# The operator adds the real WAITLIST KV namespace after visual acceptance.
+# Local preview supplies --kv WAITLIST; no remote resource is created here.

@@ -1,0 +1,167 @@
+# GitHub through the real `gh` CLI. RalX injects GH_TOKEN from the vault into
+# the child process only; agents never see it.
+- name: gh.repo.list
+  description: "List GitHub repositories for an owner (default: the connected account)."
+  risk: read
+  requires: [github]
+  params:
+    - {name: owner, type: string, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}", description: "User or org; empty = you"}
+    - {name: limit, type: integer, min: 1, max: 200, default: 30}
+    - {name: visibility, type: string, enum: [public, private, internal]}
+  cli:
+    tool: gh
+    argv: [repo, list, {opt: ["{owner}"]}, --limit, "{limit}", {opt: [--visibility, "{visibility}"]}, --json, "name,nameWithOwner,visibility,description,updatedAt,url,isArchived"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.repo.view
+  description: Show one repository's details.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}", description: "owner/name"}
+  cli:
+    tool: gh
+    argv: [repo, view, "{repo}", --json, "name,nameWithOwner,description,visibility,defaultBranchRef,url,updatedAt,stargazerCount,isArchived"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.issue.list
+  description: List issues in a repository.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: state, type: string, enum: [open, closed, all], default: open}
+    - {name: limit, type: integer, min: 1, max: 200, default: 30}
+  cli:
+    tool: gh
+    argv: [issue, list, --repo, "{repo}", --state, "{state}", --limit, "{limit}", --json, "number,title,state,author,labels,updatedAt,url"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.issue.view
+  description: Show one issue with its body and comments.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: number, type: integer, required: true, min: 1}
+  cli:
+    tool: gh
+    argv: [issue, view, "{number}", --repo, "{repo}", --json, "number,title,state,body,author,comments,labels,url"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.issue.create
+  description: Open an issue in a repository. Held for the owner's approval (it posts publicly under your account).
+  risk: gated
+  gate_reason: posts
+  requires: [github]
+  summary: "Open issue in {repo}: {title}"
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: title, type: string, required: true, max_len: 256}
+    - {name: body, type: string, default: "", max_len: 65536, allow_leading_dash: true}
+  cli:
+    tool: gh
+    argv: [issue, create, --repo, "{repo}", --title, "{title}", {opt: [--body, "{body}"]}]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: text
+
+- name: gh.pr.list
+  description: List pull requests in a repository.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: state, type: string, enum: [open, closed, merged, all], default: open}
+    - {name: limit, type: integer, min: 1, max: 100, default: 20}
+  cli:
+    tool: gh
+    argv: [pr, list, --repo, "{repo}", --state, "{state}", --limit, "{limit}", --json, "number,title,state,author,headRefName,baseRefName,isDraft,updatedAt,url"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.pr.view
+  description: Show one pull request, including review decision and checks summary.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: number, type: integer, required: true, min: 1}
+  cli:
+    tool: gh
+    argv: [pr, view, "{number}", --repo, "{repo}", --json, "number,title,state,body,author,headRefName,baseRefName,mergeable,reviewDecision,statusCheckRollup,url"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.pr.merge
+  description: Merge a pull request (squash). Held for the owner's approval.
+  risk: gated
+  gate_reason: deploys
+  requires: [github]
+  summary: "Merge PR #{number} in {repo}"
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: number, type: integer, required: true, min: 1}
+  cli:
+    tool: gh
+    argv: [pr, merge, "{number}", --repo, "{repo}", --squash]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: text
+
+- name: gh.run.list
+  description: List recent GitHub Actions runs in a repository.
+  risk: read
+  requires: [github]
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+    - {name: limit, type: integer, min: 1, max: 50, default: 10}
+  cli:
+    tool: gh
+    argv: [run, list, --repo, "{repo}", --limit, "{limit}", --json, "databaseId,displayTitle,status,conclusion,workflowName,headBranch,createdAt,url"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.api.get
+  description: Read-only GitHub REST API GET (e.g. repos/OWNER/REPO/commits). No writes.
+  risk: read
+  requires: [github]
+  params:
+    - {name: path, type: string, required: true, pattern: "(repos|users|orgs|user|search|rate_limit|gists|notifications)(/[A-Za-z0-9._~%-]+)*(\\?[A-Za-z0-9._~%=&+-]*)?", description: "API path without leading slash"}
+  cli:
+    tool: gh
+    argv: [api, --method, GET, "{path}"]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: json
+
+- name: gh.repo.create
+  description: Create a repository. Held for the owner's approval; an owner-qualified name (org/name) exposes the repo name and description to an organization's other members even when private, so RalX can't tell a private-to-you repo from a shared one at this layer.
+  risk: gated
+  requires: [github]
+  gate_reason: publishes
+  summary: "Create {visibility} repo {name}"
+  params:
+    - {name: name, type: string, required: true, pattern: "([A-Za-z0-9][A-Za-z0-9-]{0,38}/)?[A-Za-z0-9._-]{1,100}"}
+    - {name: visibility, type: string, enum: [private, public, internal], default: private}
+    - {name: description, type: string, default: "", max_len: 350}
+  cli:
+    tool: gh
+    argv: [repo, create, "{name}", {map: {param: visibility, values: {private: --private, public: --public, internal: --internal}}}, {opt: [--description, "{description}"]}]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: text
+
+- name: gh.repo.delete
+  description: Delete a repository permanently. Held for the owner's approval.
+  risk: gated
+  gate_reason: deletes
+  requires: [github]
+  summary: "DELETE repository {repo} (permanent)"
+  params:
+    - {name: repo, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+  cli:
+    tool: gh
+    argv: [repo, delete, "{repo}", --yes]
+    env: {GH_TOKEN: "secret:github.token"}
+    output: text

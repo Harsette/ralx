@@ -1,0 +1,13 @@
+WEBVTT
+
+00:00.000 --> 00:03.000
+Claude Code is asked to create an account in a local demo app, sign in, and read the account page.
+
+00:03.000 --> 00:13.500
+RalX generates a test login, enters the password in the browser, and submits the sign-up form.
+
+00:13.500 --> 00:20.000
+RalX signs in and returns the authenticated account text. The password is not in the tool replies.
+
+00:20.000 --> 00:27.000
+Your agent signs in. It never sees the password through RalX. Install instructions: github.com/Harsette/ralx

@@ -1,0 +1,36 @@
+[Unit]
+Description=RalX hub (vault + broker + remote MCP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ralx
+Group=ralx
+Environment=RALX_DATA=/var/lib/ralx
+ExecStart=/usr/local/bin/ralx daemon --addr 127.0.0.1:7317 --admin-pipe /run/ralx/admin.sock
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=ralx
+RuntimeDirectoryMode=0750
+StateDirectory=ralx
+StateDirectoryMode=0700
+UMask=0077
+# Hardening: the hub only needs its own state dir, outbound HTTPS and loopback.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictNamespaces=yes
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/ralx /run/ralx
+
+[Install]
+WantedBy=multi-user.target

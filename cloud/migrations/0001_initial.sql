@@ -1,0 +1,12 @@
+CREATE TABLE users (id TEXT PRIMARY KEY,email TEXT NOT NULL,name TEXT,avatar_url TEXT);
+CREATE TABLE sessions (hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,expires INTEGER NOT NULL);
+CREATE TABLE oauth_states (hash TEXT PRIMARY KEY,expires INTEGER NOT NULL,verifier TEXT NOT NULL);
+CREATE TABLE codes (hash TEXT PRIMARY KEY,user_id TEXT NOT NULL,expires INTEGER NOT NULL,used INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE agents (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,hash TEXT UNIQUE NOT NULL,name TEXT NOT NULL,client TEXT NOT NULL,created_at TEXT NOT NULL,last_used_at TEXT,revoked INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE approvals (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,agent_id TEXT NOT NULL,tool TEXT NOT NULL,account TEXT NOT NULL,payload TEXT NOT NULL,summary TEXT NOT NULL,created_at TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending');
+CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,at TEXT NOT NULL,agent TEXT NOT NULL,tool TEXT NOT NULL,account TEXT,outcome TEXT NOT NULL);
+CREATE TABLE auth_configs (slug TEXT PRIMARY KEY,id TEXT NOT NULL);
+CREATE INDEX sessions_expiry ON sessions(expires);
+CREATE INDEX approvals_user ON approvals(user_id,status);
+CREATE INDEX activity_user ON activity(user_id,id);
+CREATE TABLE limits (bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,expires INTEGER NOT NULL);

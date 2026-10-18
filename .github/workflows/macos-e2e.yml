@@ -1,0 +1,63 @@
+name: macOS install and sign-in
+on:
+  push:
+    branches: [main, 'launch/macos-proof-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-e2e-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  macos:
+    name: ${{ matrix.runner }} / ${{ matrix.shell }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+            shell: /bin/zsh
+          - runner: macos-15-intel
+            arch: amd64
+            shell: /bin/bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check native architecture and Chrome
+        shell: bash
+        run: |
+          test "$(go env GOARCH)" = '${{ matrix.arch }}'
+          test -x '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      - name: Build the native release binary
+        shell: bash
+        run: |
+          mkdir -p tmp/macos-proof
+          CGO_ENABLED=0 go build -mod=readonly -trimpath -o "tmp/macos-proof/ralx_darwin_${{ matrix.arch }}" ./cmd/ralx
+      - name: Check fresh Codex settings and reversible writes
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -mod=readonly ./internal/setupconfig ./cmd/ralx -run 'TestConfig|TestFreshCodexConfig|TestAntigravityLocation' -count=1 -v 2>&1 | tee tmp/macos-proof/config-tests.log
+      - name: Install, check all apps, sign in and uninstall
+        shell: bash
+        run: |
+          set -o pipefail
+          sh scripts/prove-install-macos.sh "$PWD/tmp/macos-proof/ralx_darwin_${{ matrix.arch }}" '${{ matrix.shell }}' 2>&1 | tee tmp/macos-proof/journey.log
+      - name: Retain the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-e2e-${{ matrix.arch }}
+          path: |
+            tmp/macos-proof/*.log
+          retention-days: 7
+          if-no-files-found: warn

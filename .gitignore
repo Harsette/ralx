@@ -1,0 +1,12 @@
+bin/
+*.exe
+*.key
+*.db
+*.db-wal
+*.db-shm
+client_secret*.json
+.env
+.env.*
+!.env.example
+/tmp/
+.wrangler/

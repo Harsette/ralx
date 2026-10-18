@@ -1,0 +1,81 @@
+# Vercel through the real `vercel` CLI. RalX injects VERCEL_TOKEN from the
+# vault into the child process only. `ralx connect vercel` runs Vercel's own
+# device login inside RalX, so the token never appears on screen.
+- name: vercel.whoami
+  description: Show which Vercel account RalX is connected as.
+  risk: read
+  requires: [vercel]
+  params: []
+  cli:
+    tool: vercel
+    argv: [whoami, --json]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: json
+
+- name: vercel.projects.list
+  description: List Vercel projects (optionally filtered by name).
+  risk: read
+  requires: [vercel]
+  params:
+    - {name: filter, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+    - {name: scope, type: string, pattern: "[A-Za-z0-9._-]{1,100}", description: "Team slug; empty = personal/default"}
+  cli:
+    tool: vercel
+    argv: [project, ls, --json, {opt: [--filter, "{filter}"]}, {opt: [--scope, "{scope}"]}]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: json
+
+- name: vercel.deployments.list
+  description: List recent deployments, optionally for one project.
+  risk: read
+  requires: [vercel]
+  params:
+    - {name: project, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+    - {name: scope, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+  cli:
+    tool: vercel
+    argv: [ls, {opt: ["{project}"]}, --json, {opt: [--scope, "{scope}"]}]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: json
+
+- name: vercel.domains.list
+  description: List domains on the Vercel account.
+  risk: read
+  requires: [vercel]
+  params:
+    - {name: scope, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+  cli:
+    tool: vercel
+    argv: [domains, ls, --json, {opt: [--scope, "{scope}"]}]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: json
+
+- name: vercel.deployment.remove
+  description: Remove a deployment (by URL or id). Held for the owner's approval.
+  risk: gated
+  gate_reason: deletes
+  requires: [vercel]
+  summary: "Remove Vercel deployment {deployment}"
+  params:
+    - {name: deployment, type: string, required: true, pattern: "(dpl_[A-Za-z0-9]{10,40}|[a-z0-9-]{1,100}\\.vercel\\.app)"}
+    - {name: scope, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+  cli:
+    tool: vercel
+    argv: [remove, "{deployment}", --yes, {opt: [--scope, "{scope}"]}]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: text
+
+- name: vercel.project.remove
+  description: Delete a whole Vercel project. Held for the owner's approval.
+  risk: gated
+  gate_reason: deletes
+  requires: [vercel]
+  summary: "DELETE Vercel project {project} (permanent)"
+  params:
+    - {name: project, type: string, required: true, pattern: "[A-Za-z0-9._-]{1,100}"}
+    - {name: scope, type: string, pattern: "[A-Za-z0-9._-]{1,100}"}
+  cli:
+    tool: vercel
+    argv: [project, rm, "{project}", {opt: [--scope, "{scope}"]}]
+    env: {VERCEL_TOKEN: "secret:vercel.token", VERCEL_TELEMETRY_DISABLED: "1"}
+    output: text

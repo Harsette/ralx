@@ -1,0 +1,23 @@
+{
+  "name": "ralx-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "deploy": "node scripts/selfhost.mjs --update",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "selfhost": "node scripts/selfhost.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "esbuild": "^0.28.2",
+    "miniflare": "^5.20261012.1-beta",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.45.0"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
+}

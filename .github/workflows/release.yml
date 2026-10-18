@@ -1,0 +1,54 @@
+name: Release binaries
+on:
+  push:
+    tags: ['v[0-9]*']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        goos: [windows, darwin, linux]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Cross-build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+          TAG: ${{ github.ref_name }}
+        run: |
+          ext=''; [ "$GOOS" != windows ] || ext='.exe'
+          mkdir -p dist
+          go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$TAG" -o "dist/ralx_${GOOS}_${GOARCH}${ext}" ./cmd/ralx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ralx-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ralx-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum ralx_* > checksums.txt
+          gh release create "$TAG" --verify-tag --generate-notes ./*

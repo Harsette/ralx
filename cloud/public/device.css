@@ -1,0 +1,14 @@
+/* Existing cloud tokens, rows, controls and typography from DESIGN.md. */
+.device-page { max-width: 660px; }
+.device-page .row { min-height: 48px; padding-top: 8px; padding-bottom: 8px; flex-wrap: nowrap; }
+.device-page .row-id { flex: 1; }
+.device-code { font: 500 26px/38px var(--mono); letter-spacing: .08em; }
+.device-details { margin: 24px 0; }
+.device-machine { overflow-wrap: anywhere; }
+.device-actions { display: flex; gap: 10px; margin-top: 24px; }
+.device-actions .btn { min-width: 104px; }
+.device-note { margin-top: 18px; color: var(--ink-3); }
+.device-entry { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.device-entry label { flex-basis: 100%; }
+.device-entry input { min-width: 0; flex: 1; }
+@media(max-width:600px) { .device-page { padding-top: 30px; } .device-page .row { align-items: center; } }

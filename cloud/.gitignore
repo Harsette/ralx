@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env*
+evidence-private/
+
+wrangler.*.local.json*
+wrangler.selfhost.json
+.selfhost-secrets.json
+.dev.vars*

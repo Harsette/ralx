@@ -1,0 +1,67 @@
+# Cloudflare through the real `wrangler` CLI. RalX injects the Cloudflare API
+# token (and account id) from the vault into the child process only; agents
+# never see them. The token is added once via a RalX paste link
+# (ralx admin paste-link cloudflare --field token --meta allowed_hosts=api.cloudflare.com),
+# which also lets http.request reach the Cloudflare API with {{cloudflare}}.
+# Reads are open; deploy/delete/secret are held for the owner's approval, and DNS
+# or any other write goes through http.request (gated) to api.cloudflare.com.
+- name: cloudflare.whoami
+  description: Show which Cloudflare account the token belongs to and its scopes.
+  risk: read
+  requires: [cloudflare]
+  params: []
+  cli:
+    tool: wrangler
+    argv: [whoami]
+    env: {CLOUDFLARE_API_TOKEN: "secret:cloudflare.token", WRANGLER_SEND_METRICS: "false", CI: "1"}
+    output: text
+
+- name: cloudflare.kv.list
+  description: List tyour account's Workers KV namespaces.
+  risk: read
+  requires: [cloudflare]
+  params: []
+  cli:
+    tool: wrangler
+    argv: [kv, namespace, list]
+    env: {CLOUDFLARE_API_TOKEN: "secret:cloudflare.token", WRANGLER_SEND_METRICS: "false", CI: "1"}
+    output: json
+
+- name: cloudflare.pages.list
+  description: List Cloudflare Pages projects.
+  risk: read
+  requires: [cloudflare]
+  params: []
+  cli:
+    tool: wrangler
+    argv: [pages, project, list]
+    env: {CLOUDFLARE_API_TOKEN: "secret:cloudflare.token", WRANGLER_SEND_METRICS: "false", CI: "1"}
+    output: text
+
+- name: cloudflare.kv.create
+  description: Create a Workers KV namespace. Held for the owner's approval.
+  risk: gated
+  gate_reason: deploys
+  requires: [cloudflare]
+  summary: "Create Cloudflare KV namespace {title}"
+  params:
+    - {name: title, type: string, required: true, pattern: "[A-Za-z0-9_][A-Za-z0-9_-]{0,62}"}
+  cli:
+    tool: wrangler
+    argv: [kv, namespace, create, "{title}"]
+    env: {CLOUDFLARE_API_TOKEN: "secret:cloudflare.token", WRANGLER_SEND_METRICS: "false", CI: "1"}
+    output: text
+
+- name: cloudflare.pages.delete
+  description: Delete a Cloudflare Pages project permanently. Held for the owner's approval.
+  risk: gated
+  gate_reason: deletes
+  requires: [cloudflare]
+  summary: "DELETE Cloudflare Pages project {project} (permanent)"
+  params:
+    - {name: project, type: string, required: true, pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,62}"}
+  cli:
+    tool: wrangler
+    argv: [pages, project, delete, "{project}", --yes]
+    env: {CLOUDFLARE_API_TOKEN: "secret:cloudflare.token", WRANGLER_SEND_METRICS: "false", CI: "1"}
+    output: text
